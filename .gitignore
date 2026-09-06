@@ -1,0 +1,31 @@
+﻿# Environment and secrets
+backend/.env
+*.env
+backend/app/core/.jwt_secret
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# SQLite database
+*.db
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# Vite
+frontend/dist/
+frontend/.vite/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

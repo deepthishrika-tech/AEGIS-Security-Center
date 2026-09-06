@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Attack Tool Detector | Command Center</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- ================= SIDEBAR ================= -->
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+
+            <div>
+                <h1>AEGIS</h1>
+                <span>COMMAND CENTER</span>
+            </div>
+
+        </div>
+
+
+        <div class="sidebar-section">
+
+            <div class="section-title">
+                OPERATIONS
+            </div>
+
+            <a class="nav-item active" href="#">
+                <i class="fa-solid fa-shield-halved"></i>
+
+                <div>
+                    <strong>Command Center</strong>
+                    <small>Real-time security operations</small>
+                </div>
+            </a>
+
+
+            <a class="nav-item" href="#">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+
+                <div>
+                    <strong>Threat Intelligence</strong>
+                    <small>Advanced threat analysis</small>
+                </div>
+            </a>
+
+
+            <a class="nav-item" href="#">
+                <i class="fa-solid fa-server"></i>
+
+                <div>
+                    <strong>Asset Matrix</strong>
+                    <small>Infrastructure management</small>
+                </div>
+            </a>
+
+
+            <a class="nav-item" href="#">
+                <i class="fa-solid fa-chart-column"></i>
+
+                <div>
+                    <strong>Executive Intelligence</strong>
+                    <small>Strategic reporting</small>
+                </div>
+            </a>
+
+
+            <a class="nav-item" href="#">
+                <i class="fa-solid fa-wave-square"></i>
+
+                <div>
+                    <strong>System Observatory</strong>
+                    <small>Performance monitoring</small>
+                </div>
+            </a>
+
+        </div>
+
+
+        <div class="sidebar-section system-status">
+
+            <div class="section-title">
+                SYSTEM STATUS
+            </div>
+
+            <div class="status-row">
+                <span>Alert Queue</span>
+                <b class="badge danger" id="sidebarAlerts">47</b>
+            </div>
+
+            <div class="status-row">
+                <span>Active Incidents</span>
+                <b class="badge warning">12</b>
+            </div>
+
+            <div class="status-row">
+                <span>Monitored Assets</span>
+                <b class="badge success" id="sidebarAssets">2,847</b>
+            </div>
+
+        </div>
+
+
+        <div class="sidebar-footer">
+
+            <div class="user-avatar">
+                AD
+            </div>
+
+            <div>
+                <strong>Security Admin</strong>
+                <span>Administrator</span>
+            </div>
+
+            <i class="fa-solid fa-ellipsis"></i>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ================= MAIN CONTENT ================= -->
+
+    <main class="main">
+
+        <!-- HEADER -->
+
+        <header class="topbar">
+
+            <div>
+
+                <h2>Command Center</h2>
+
+                <p>
+                    Real-time AI attack detection & security operations
+                    <span id="currentTime"></span>
+                </p>
+
+            </div>
+
+
+            <div class="top-actions">
+
+                <div class="system-online">
+                    <span></span>
+                    OPERATIONAL
+                </div>
+
+                <button class="icon-button">
+                    <i class="fa-solid fa-bell"></i>
+                    <em>3</em>
+                </button>
+
+                <button class="icon-button">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <!-- ================= KPI CARDS ================= -->
+
+        <section class="stats-grid">
+
+
+            <div class="stat-card danger-card">
+
+                <div class="stat-content">
+
+                    <span>ACTIVE ALERTS</span>
+
+                    <strong id="activeAlerts">
+                        47
+                    </strong>
+
+                    <small class="positive">
+                        <i class="fa-solid fa-arrow-up"></i>
+                        12% from yesterday
+                    </small>
+
+                </div>
+
+                <div class="stat-icon danger-icon">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card success-card">
+
+                <div class="stat-content">
+
+                    <span>PROTECTED ASSETS</span>
+
+                    <strong id="protectedAssets">
+                        2,847
+                    </strong>
+
+                    <small class="positive">
+                        <i class="fa-solid fa-arrow-up"></i>
+                        3.2%
+                    </small>
+
+                </div>
+
+                <div class="stat-icon success-icon">
+                    <i class="fa-solid fa-shield"></i>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card blue-card">
+
+                <div class="stat-content">
+
+                    <span>ATTACK SOURCES</span>
+
+                    <strong id="attackSources">
+                        23
+                    </strong>
+
+                    <small class="negative">
+                        <i class="fa-solid fa-arrow-down"></i>
+                        2.1%
+                    </small>
+
+                </div>
+
+                <div class="stat-icon blue-icon">
+                    <i class="fa-solid fa-user-secret"></i>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card health-card">
+
+                <div class="stat-content">
+
+                    <span>SYSTEM HEALTH</span>
+
+                    <strong id="systemHealth">
+                        98.7%
+                    </strong>
+
+                    <small class="positive">
+                        <i class="fa-solid fa-arrow-up"></i>
+                        0.3%
+                    </small>
+
+                </div>
+
+                <div class="stat-icon health-icon">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= MAIN GRID ================= -->
+
+        <section class="dashboard-grid">
+
+
+            <!-- PRIORITY ALERTS -->
+
+            <div class="panel alerts-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h3>
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            Priority Alerts
+                        </h3>
+
+                        <span>Latest detected security events</span>
+                    </div>
+
+                    <div class="critical-count">
+                        2 Critical
+                    </div>
+
+                </div>
+
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                        <tr>
+                            <th>ALERT</th>
+                            <th>SEVERITY</th>
+                            <th>SOURCE</th>
+                            <th>TIME</th>
+                            <th>STATUS</th>
+                        </tr>
+
+                        </thead>
+
+
+                        <tbody id="alertsTable">
+
+                        <tr>
+
+                            <td>
+                                <div class="alert-name">
+                                    <strong>AI Tool Fingerprint Detected</strong>
+                                    <small>Adaptive request pattern</small>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="severity critical">
+                                    Critical
+                                </span>
+                            </td>
+
+                            <td>
+                                192.168.1.42
+                            </td>
+
+                            <td>
+                                2m ago
+                            </td>
+
+                            <td>
+                                <span class="status investigating">
+                                    Investigating
+                                </span>
+                            </td>
+
+                        </tr>
+
+
+                        <tr>
+
+                            <td>
+                                <div class="alert-name">
+                                    <strong>Sequential Port Scanning</strong>
+                                    <small>Multiple ports probed</small>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="severity high">
+                                    High
+                                </span>
+                            </td>
+
+                            <td>
+                                10.0.0.24
+                            </td>
+
+                            <td>
+                                5m ago
+                            </td>
+
+                            <td>
+                                <span class="status blocked">
+                                    Blocked
+                                </span>
+                            </td>
+
+                        </tr>
+
+
+                        <tr>
+
+                            <td>
+                                <div class="alert-name">
+                                    <strong>Abnormal Request Burst</strong>
+                                    <small>High request frequency</small>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="severity medium">
+                                    Medium
+                                </span>
+                            </td>
+
+                            <td>
+                                172.16.0.18
+                            </td>
+
+                            <td>
+                                9m ago
+                            </td>
+
+                            <td>
+                                <span class="status monitoring">
+                                    Monitoring
+                                </span>
+                            </td>
+
+                        </tr>
+
+
+                        <tr>
+
+                            <td>
+                                <div class="alert-name">
+                                    <strong>Unusual Payload Structure</strong>
+                                    <small>Encoded request detected</small>
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="severity high">
+                                    High
+                                </span>
+                            </td>
+
+                            <td>
+                                192.168.1.87
+                            </td>
+
+                            <td>
+                                14m ago
+                            </td>
+
+                            <td>
+                                <span class="status blocked">
+                                    Blocked
+                                </span>
+                            </td>
+
+                        </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+            <!-- SYSTEM HEALTH -->
+
+            <div class="panel health-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h3>
+                            <i class="fa-solid fa-wave-square"></i>
+                            System Health
+                        </h3>
+
+                        <span>Security services status</span>
+                    </div>
+
+                </div>
+
+
+                <div class="health-score">
+
+                    <div class="health-circle">
+                        <strong>98.7%</strong>
+                        <span>Overall Health</span>
+                    </div>
+
+                </div>
+
+
+                <div class="service-list">
+
+                    <div class="service">
+
+                        <div>
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span>Detection Engine</span>
+                        </div>
+
+                        <b class="healthy">Healthy</b>
+
+                    </div>
+
+
+                    <div class="service">
+
+                        <div>
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span>FastAPI Backend</span>
+                        </div>
+
+                        <b class="healthy">Healthy</b>
+
+                    </div>
+
+
+                    <div class="service">
+
+                        <div>
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span>Database</span>
+                        </div>
+
+                        <b class="healthy">Healthy</b>
+
+                    </div>
+
+
+                    <div class="service">
+
+                        <div>
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            <span>Threat Simulator</span>
+                        </div>
+
+                        <b class="warning">Warning</b>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- THREAT DISTRIBUTION -->
+
+            <div class="panel chart-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h3>
+                            <i class="fa-solid fa-chart-column"></i>
+                            Threat Distribution
+                        </h3>
+
+                        <span>Detected activity by category</span>
+                    </div>
+
+                </div>
+
+
+                <div class="bar-chart">
+
+                    <div class="bar-item">
+
+                        <div class="bar-value">
+                            36
+                        </div>
+
+                        <div class="bar malware" style="height: 85%;"></div>
+
+                        <span>AI Tools</span>
+
+                    </div>
+
+
+                    <div class="bar-item">
+
+                        <div class="bar-value">
+                            28
+                        </div>
+
+                        <div class="bar ransomware" style="height: 66%;"></div>
+
+                        <span>Scanning</span>
+
+                    </div>
+
+
+                    <div class="bar-item">
+
+                        <div class="bar-value">
+                            16
+                        </div>
+
+                        <div class="bar phishing" style="height: 42%;"></div>
+
+                        <span>Payloads</span>
+
+                    </div>
+
+
+                    <div class="bar-item">
+
+                        <div class="bar-value">
+                            9
+                        </div>
+
+                        <div class="bar suspicious" style="height: 25%;"></div>
+
+                        <span>Auth</span>
+
+                    </div>
+
+
+                    <div class="bar-item">
+
+                        <div class="bar-value">
+                            5
+                        </div>
+
+                        <div class="bar normal" style="height: 15%;"></div>
+
+                        <span>Other</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- RISK SCORE -->
+
+            <div class="panel risk-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h3>
+                            <i class="fa-solid fa-shield-virus"></i>
+                            Security Risk Score
+                        </h3>
+
+                        <span>Current threat level</span>
+                    </div>
+
+                </div>
+
+
+                <div class="risk-score">
+
+                    <div class="risk-ring">
+
+                        <div>
+                            <strong id="riskScore">
+                                92
+                            </strong>
+
+                            <span>/ 100</span>
+                        </div>
+
+                    </div>
+
+                    <h4>CRITICAL RISK</h4>
+
+                    <p>
+                        Multiple high-confidence attack
+                        patterns detected.
+                    </p>
+
+                </div>
+
+
+                <div class="risk-breakdown">
+
+                    <div>
+                        <span>Critical Risks</span>
+                        <b>9</b>
+                    </div>
+
+                    <div>
+                        <span>High Risks</span>
+                        <b>17</b>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- NETWORK ACTIVITY -->
+
+            <div class="panel network-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h3>
+                            <i class="fa-solid fa-chart-line"></i>
+                            Network Activity
+                        </h3>
+
+                        <span>Real-time traffic behaviour</span>
+                    </div>
+
+                    <span class="live-indicator">
+                        ● LIVE
+                    </span>
+
+                </div>
+
+
+                <div class="network-graph">
+
+                    <div class="grid-lines"></div>
+
+                    <svg
+                        viewBox="0 0 800 220"
+                        preserveAspectRatio="none"
+                    >
+
+                        <polyline
+                            class="line-one"
+                            points="
+                            0,170
+                            80,145
+                            140,155
+                            210,105
+                            280,130
+                            350,75
+                            420,110
+                            500,60
+                            580,105
+                            650,70
+                            720,95
+                            800,40
+                            "
+                        />
+
+                        <polyline
+                            class="line-two"
+                            points="
+                            0,120
+                            80,130
+                            150,95
+                            220,110
+                            300,70
+                            370,115
+                            450,80
+                            520,125
+                            600,65
+                            680,95
+                            800,75
+                            "
+                        />
+
+                    </svg>
+
+                </div>
+
+            </div>
+
+
+            <!-- RECENT ANOMALIES -->
+
+            <div class="panel anomalies-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h3>
+                            <i class="fa-solid fa-bolt"></i>
+                            Recent Anomalies
+                        </h3>
+
+                        <span>Behavioural detection engine</span>
+                    </div>
+
+                </div>
+
+
+                <div class="anomaly-list">
+
+                    <div class="anomaly">
+
+                        <div class="anomaly-icon critical">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+
+                        <div>
+                            <strong>Adaptive Request Burst</strong>
+                            <span>192.168.1.42</span>
+                        </div>
+
+                        <b>92</b>
+
+                    </div>
+
+
+                    <div class="anomaly">
+
+                        <div class="anomaly-icon high">
+                            <i class="fa-solid fa-network-wired"></i>
+                        </div>
+
+                        <div>
+                            <strong>Sequential Scan</strong>
+                            <span>10.0.0.24</span>
+                        </div>
+
+                        <b>87</b>
+
+                    </div>
+
+
+                    <div class="anomaly">
+
+                        <div class="anomaly-icon medium">
+                            <i class="fa-solid fa-code"></i>
+                        </div>
+
+                        <div>
+                            <strong>Payload Anomaly</strong>
+                            <span>172.16.0.18</span>
+                        </div>
+
+                        <b>71</b>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- FOOTER -->
+
+        <footer>
+
+            <span>
+                AEGIS AI Attack Tool Detector & Blocker
+                v1.0.0
+            </span>
+
+            <span>
+                <i class="fa-solid fa-circle"></i>
+                Detection Engine Active
+            </span>
+
+        </footer>
+
+    </main>
+
+</div>
+
+
+<script src="app.js"></script>
+
+</body>
+</html>
