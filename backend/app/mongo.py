@@ -1,17 +1,14 @@
-from pymongo import MongoClient
+# backend/app/mongo.py
+
 import os
 from dotenv import load_dotenv
-
-
-# =========================================================
-# LOAD ENVIRONMENT VARIABLES
-# =========================================================
+from pymongo import MongoClient
 
 load_dotenv()
 
 
 # =========================================================
-# LOCAL MONGODB CONFIGURATION
+# ENVIRONMENT
 # =========================================================
 
 MONGO_URI = os.getenv(
@@ -24,14 +21,7 @@ MONGO_DB_NAME = os.getenv(
     "aegis_security_center"
 )
 
-
-# =========================================================
-# MONGODB ATLAS CONFIGURATION
-# =========================================================
-
-ATLAS_MONGO_URI = os.getenv(
-    "ATLAS_MONGO_URI"
-)
+ATLAS_MONGO_URI = os.getenv("ATLAS_MONGO_URI")
 
 ATLAS_MONGO_DB_NAME = os.getenv(
     "ATLAS_MONGO_DB_NAME",
@@ -39,77 +29,87 @@ ATLAS_MONGO_DB_NAME = os.getenv(
 )
 
 
-# =========================================================
-# CONNECTION OBJECTS
-# =========================================================
-
-local_client = None
-local_db = None
-
-atlas_client = None
-atlas_db = None
+# Render automatically provides the PORT variable.
+# RENDER is used to identify the production environment.
+IS_RENDER = bool(os.getenv("RENDER"))
 
 
 # =========================================================
-# CONNECT TO LOCAL MONGODB
+# GLOBAL CONNECTIONS
+# =========================================================
+
+_local_client = None
+_local_db = None
+
+_atlas_client = None
+_atlas_db = None
+
+
+# =========================================================
+# LOCAL MONGODB
 # =========================================================
 
 def connect_local():
+    """
+    Connect to local MongoDB.
 
-    global local_client
-    global local_db
+    Used during local development.
+    """
+
+    global _local_client, _local_db
 
     try:
-
-        # Already connected
-        if local_db is not None:
-            return local_db
-
         print("----------------------------------------")
         print("Connecting to LOCAL MongoDB...")
         print("----------------------------------------")
 
-        local_client = MongoClient(
+        _local_client = MongoClient(
             MONGO_URI,
-            serverSelectionTimeoutMS=5000
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000
         )
 
-        # Test connection
-        local_client.admin.command("ping")
+        _local_client.admin.command("ping")
 
-        local_db = local_client[MONGO_DB_NAME]
+        _local_db = _local_client[MONGO_DB_NAME]
 
         print("========================================")
         print("LOCAL MONGODB : CONNECTED")
-        print(f"DATABASE      : {MONGO_DB_NAME}")
+        print("DATABASE      :", MONGO_DB_NAME)
         print("========================================")
 
-        return local_db
+        return _local_db
 
-    except Exception as error:
+    except Exception as e:
 
         print("========================================")
         print("LOCAL MONGODB : CONNECTION FAILED")
-        print(f"ERROR         : {error}")
+        print("ERROR         :", e)
         print("========================================")
 
-        local_db = None
+        _local_client = None
+        _local_db = None
 
         return None
 
 
 # =========================================================
-# CONNECT TO MONGODB ATLAS
+# ATLAS MONGODB
 # =========================================================
 
 def connect_atlas():
+    """
+    Connect to MongoDB Atlas.
+    """
 
-    global atlas_client
-    global atlas_db
+    global _atlas_client, _atlas_db
 
     try:
 
-        # Atlas URI not configured
+        print("----------------------------------------")
+        print("Connecting to MongoDB Atlas...")
+        print("----------------------------------------")
+
         if not ATLAS_MONGO_URI:
 
             print("========================================")
@@ -118,41 +118,32 @@ def connect_atlas():
 
             return None
 
-        # Already connected
-        if atlas_db is not None:
-            return atlas_db
-
-        print("----------------------------------------")
-        print("Connecting to MongoDB Atlas...")
-        print("----------------------------------------")
-
-        atlas_client = MongoClient(
+        _atlas_client = MongoClient(
             ATLAS_MONGO_URI,
-            serverSelectionTimeoutMS=5000
+            serverSelectionTimeoutMS=10000,
+            connectTimeoutMS=10000
         )
 
-        # Test connection
-        atlas_client.admin.command("ping")
+        _atlas_client.admin.command("ping")
 
-        atlas_db = atlas_client[
-            ATLAS_MONGO_DB_NAME
-        ]
+        _atlas_db = _atlas_client[ATLAS_MONGO_DB_NAME]
 
         print("========================================")
         print("MONGODB ATLAS : CONNECTED")
-        print(f"DATABASE      : {ATLAS_MONGO_DB_NAME}")
+        print("DATABASE      :", ATLAS_MONGO_DB_NAME)
         print("========================================")
 
-        return atlas_db
+        return _atlas_db
 
-    except Exception as error:
+    except Exception as e:
 
         print("========================================")
         print("MONGODB ATLAS : CONNECTION FAILED")
-        print(f"ERROR         : {error}")
+        print("ERROR         :", e)
         print("========================================")
 
-        atlas_db = None
+        _atlas_client = None
+        _atlas_db = None
 
         return None
 
@@ -160,205 +151,223 @@ def connect_atlas():
 # =========================================================
 # BACKWARD COMPATIBILITY
 # =========================================================
-#
-# Your existing audit.py imports:
-#
-# from app.mongo import connect_mongodb
-#
-# Therefore DO NOT remove this function.
-#
-# It keeps the existing application compatible.
-# =========================================================
 
 def connect_mongodb():
+    """
+    Existing parts of the application may still import
+    connect_mongodb(), so keep this function.
+    """
+
+    # On Render, Atlas is the production database.
+    if IS_RENDER:
+
+        return connect_atlas()
 
     return connect_local()
 
 
 # =========================================================
-# GET LOCAL DATABASE
+# DATABASE GETTERS
 # =========================================================
 
 def get_database():
+    """
+    Return the primary database.
 
-    global local_db
+    Local development:
+        Local MongoDB
 
-    if local_db is None:
+    Render:
+        MongoDB Atlas
+    """
+
+    global _local_db
+
+    if IS_RENDER:
+
+        if _atlas_db is None:
+            connect_atlas()
+
+        return _atlas_db
+
+    if _local_db is None:
         connect_local()
 
-    return local_db
+    return _local_db
 
-
-# =========================================================
-# GET ATLAS DATABASE
-# =========================================================
 
 def get_atlas_database():
+    """
+    Return MongoDB Atlas database.
+    """
 
-    global atlas_db
+    global _atlas_db
 
-    if atlas_db is None:
+    if _atlas_db is None:
         connect_atlas()
 
-    return atlas_db
+    return _atlas_db
 
 
 # =========================================================
 # DUAL COLLECTION
 # =========================================================
-#
-# Every WRITE operation is sent to:
-#
-# 1. Local MongoDB
-# 2. MongoDB Atlas
-#
-# This means the same application data exists
-# in both databases automatically.
-# =========================================================
 
 class DualCollection:
+    """
+    Collection wrapper.
 
-    def __init__(
-        self,
-        local_collection,
-        atlas_collection
-    ):
+    LOCAL DEVELOPMENT:
+        Writes go to Local MongoDB + Atlas.
 
-        self.local = local_collection
-        self.atlas = atlas_collection
+    RENDER:
+        Writes go to Atlas only.
 
+    Reads:
+        Prefer local when available, otherwise Atlas.
+    """
 
-    # =====================================================
+    def __init__(self, collection_name):
+
+        self.collection_name = collection_name
+
+    # -----------------------------------------------------
+    # COLLECTIONS
+    # -----------------------------------------------------
+
+    def _local_collection(self):
+
+        db = get_database()
+
+        if db is None:
+            return None
+
+        return db[self.collection_name]
+
+    def _atlas_collection(self):
+
+        db = get_atlas_database()
+
+        if db is None:
+            return None
+
+        return db[self.collection_name]
+
+    # -----------------------------------------------------
     # INSERT ONE
-    # =====================================================
+    # -----------------------------------------------------
 
-    def insert_one(
-        self,
-        document,
-        *args,
-        **kwargs
-    ):
+    def insert_one(self, document, *args, **kwargs):
 
         local_result = None
         atlas_result = None
 
-        errors = []
+        # Render = Atlas only
+        if IS_RENDER:
 
-        # Local MongoDB
-        try:
+            collection = self._atlas_collection()
 
-            if self.local is not None:
-
-                local_result = self.local.insert_one(
-                    document.copy(),
-                    *args,
-                    **kwargs
+            if collection is None:
+                raise RuntimeError(
+                    "MongoDB Atlas connection is not available."
                 )
 
-        except Exception as error:
-
-            errors.append(
-                f"Local MongoDB: {error}"
+            return collection.insert_one(
+                document,
+                *args,
+                **kwargs
             )
 
+        # Local + Atlas
+        local_collection = self._local_collection()
 
-        # MongoDB Atlas
-        try:
+        if local_collection is not None:
 
-            if self.atlas is not None:
-
-                atlas_result = self.atlas.insert_one(
-                    document.copy(),
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            errors.append(
-                f"MongoDB Atlas: {error}"
+            local_result = local_collection.insert_one(
+                document.copy(),
+                *args,
+                **kwargs
             )
 
+        atlas_collection = self._atlas_collection()
 
-        if errors:
+        if atlas_collection is not None:
 
-            print(
-                "MongoDB dual-write warning:",
-                " | ".join(errors)
+            atlas_result = atlas_collection.insert_one(
+                document.copy(),
+                *args,
+                **kwargs
             )
 
+        if atlas_result is not None:
+            return atlas_result
 
-        return local_result or atlas_result
+        if local_result is not None:
+            return local_result
 
+        raise RuntimeError(
+            "Neither Local MongoDB nor MongoDB Atlas is available."
+        )
 
-    # =====================================================
+    # -----------------------------------------------------
     # INSERT MANY
-    # =====================================================
+    # -----------------------------------------------------
 
-    def insert_many(
-        self,
-        documents,
-        *args,
-        **kwargs
-    ):
+    def insert_many(self, documents, *args, **kwargs):
 
         documents = list(documents)
 
+        if IS_RENDER:
+
+            collection = self._atlas_collection()
+
+            if collection is None:
+                raise RuntimeError(
+                    "MongoDB Atlas connection is not available."
+                )
+
+            return collection.insert_many(
+                documents,
+                *args,
+                **kwargs
+            )
+
         local_result = None
         atlas_result = None
 
-        errors = []
+        local_collection = self._local_collection()
 
-        # Local
-        try:
+        if local_collection is not None:
 
-            if self.local is not None:
-
-                local_result = self.local.insert_many(
-                    [doc.copy() for doc in documents],
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            errors.append(
-                f"Local MongoDB: {error}"
+            local_result = local_collection.insert_many(
+                [doc.copy() for doc in documents],
+                *args,
+                **kwargs
             )
 
+        atlas_collection = self._atlas_collection()
 
-        # Atlas
-        try:
+        if atlas_collection is not None:
 
-            if self.atlas is not None:
-
-                atlas_result = self.atlas.insert_many(
-                    [doc.copy() for doc in documents],
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            errors.append(
-                f"MongoDB Atlas: {error}"
+            atlas_result = atlas_collection.insert_many(
+                [doc.copy() for doc in documents],
+                *args,
+                **kwargs
             )
 
+        if atlas_result is not None:
+            return atlas_result
 
-        if errors:
+        if local_result is not None:
+            return local_result
 
-            print(
-                "MongoDB dual-write warning:",
-                " | ".join(errors)
-            )
+        raise RuntimeError(
+            "Neither Local MongoDB nor MongoDB Atlas is available."
+        )
 
-
-        return local_result or atlas_result
-
-
-    # =====================================================
+    # -----------------------------------------------------
     # UPDATE ONE
-    # =====================================================
+    # -----------------------------------------------------
 
     def update_one(
         self,
@@ -368,55 +377,52 @@ class DualCollection:
         **kwargs
     ):
 
+        if IS_RENDER:
+
+            collection = self._atlas_collection()
+
+            if collection is None:
+                raise RuntimeError(
+                    "MongoDB Atlas connection is not available."
+                )
+
+            return collection.update_one(
+                filter,
+                update,
+                *args,
+                **kwargs
+            )
+
         local_result = None
         atlas_result = None
 
-        # Local
-        try:
+        local_collection = self._local_collection()
 
-            if self.local is not None:
+        if local_collection is not None:
 
-                local_result = self.local.update_one(
-                    filter,
-                    update,
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            print(
-                "Local MongoDB update error:",
-                error
+            local_result = local_collection.update_one(
+                filter,
+                update,
+                *args,
+                **kwargs
             )
 
+        atlas_collection = self._atlas_collection()
 
-        # Atlas
-        try:
+        if atlas_collection is not None:
 
-            if self.atlas is not None:
-
-                atlas_result = self.atlas.update_one(
-                    filter,
-                    update,
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            print(
-                "MongoDB Atlas update error:",
-                error
+            atlas_result = atlas_collection.update_one(
+                filter,
+                update,
+                *args,
+                **kwargs
             )
 
+        return atlas_result or local_result
 
-        return local_result or atlas_result
-
-
-    # =====================================================
+    # -----------------------------------------------------
     # UPDATE MANY
-    # =====================================================
+    # -----------------------------------------------------
 
     def update_many(
         self,
@@ -426,55 +432,52 @@ class DualCollection:
         **kwargs
     ):
 
+        if IS_RENDER:
+
+            collection = self._atlas_collection()
+
+            if collection is None:
+                raise RuntimeError(
+                    "MongoDB Atlas connection is not available."
+                )
+
+            return collection.update_many(
+                filter,
+                update,
+                *args,
+                **kwargs
+            )
+
         local_result = None
         atlas_result = None
 
-        # Local
-        try:
+        local_collection = self._local_collection()
 
-            if self.local is not None:
+        if local_collection is not None:
 
-                local_result = self.local.update_many(
-                    filter,
-                    update,
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            print(
-                "Local MongoDB update error:",
-                error
+            local_result = local_collection.update_many(
+                filter,
+                update,
+                *args,
+                **kwargs
             )
 
+        atlas_collection = self._atlas_collection()
 
-        # Atlas
-        try:
+        if atlas_collection is not None:
 
-            if self.atlas is not None:
-
-                atlas_result = self.atlas.update_many(
-                    filter,
-                    update,
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            print(
-                "MongoDB Atlas update error:",
-                error
+            atlas_result = atlas_collection.update_many(
+                filter,
+                update,
+                *args,
+                **kwargs
             )
 
+        return atlas_result or local_result
 
-        return local_result or atlas_result
-
-
-    # =====================================================
+    # -----------------------------------------------------
     # REPLACE ONE
-    # =====================================================
+    # -----------------------------------------------------
 
     def replace_one(
         self,
@@ -484,53 +487,52 @@ class DualCollection:
         **kwargs
     ):
 
+        if IS_RENDER:
+
+            collection = self._atlas_collection()
+
+            if collection is None:
+                raise RuntimeError(
+                    "MongoDB Atlas connection is not available."
+                )
+
+            return collection.replace_one(
+                filter,
+                replacement,
+                *args,
+                **kwargs
+            )
+
         local_result = None
         atlas_result = None
 
-        try:
+        local_collection = self._local_collection()
 
-            if self.local is not None:
+        if local_collection is not None:
 
-                local_result = self.local.replace_one(
-                    filter,
-                    replacement.copy(),
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            print(
-                "Local MongoDB replace error:",
-                error
+            local_result = local_collection.replace_one(
+                filter,
+                replacement.copy(),
+                *args,
+                **kwargs
             )
 
+        atlas_collection = self._atlas_collection()
 
-        try:
+        if atlas_collection is not None:
 
-            if self.atlas is not None:
-
-                atlas_result = self.atlas.replace_one(
-                    filter,
-                    replacement.copy(),
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            print(
-                "MongoDB Atlas replace error:",
-                error
+            atlas_result = atlas_collection.replace_one(
+                filter,
+                replacement.copy(),
+                *args,
+                **kwargs
             )
 
+        return atlas_result or local_result
 
-        return local_result or atlas_result
-
-
-    # =====================================================
+    # -----------------------------------------------------
     # DELETE ONE
-    # =====================================================
+    # -----------------------------------------------------
 
     def delete_one(
         self,
@@ -539,53 +541,49 @@ class DualCollection:
         **kwargs
     ):
 
+        if IS_RENDER:
+
+            collection = self._atlas_collection()
+
+            if collection is None:
+                raise RuntimeError(
+                    "MongoDB Atlas connection is not available."
+                )
+
+            return collection.delete_one(
+                filter,
+                *args,
+                **kwargs
+            )
+
         local_result = None
         atlas_result = None
 
-        # Local
-        try:
+        local_collection = self._local_collection()
 
-            if self.local is not None:
+        if local_collection is not None:
 
-                local_result = self.local.delete_one(
-                    filter,
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            print(
-                "Local MongoDB delete error:",
-                error
+            local_result = local_collection.delete_one(
+                filter,
+                *args,
+                **kwargs
             )
 
+        atlas_collection = self._atlas_collection()
 
-        # Atlas
-        try:
+        if atlas_collection is not None:
 
-            if self.atlas is not None:
-
-                atlas_result = self.atlas.delete_one(
-                    filter,
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            print(
-                "MongoDB Atlas delete error:",
-                error
+            atlas_result = atlas_collection.delete_one(
+                filter,
+                *args,
+                **kwargs
             )
 
+        return atlas_result or local_result
 
-        return local_result or atlas_result
-
-
-    # =====================================================
+    # -----------------------------------------------------
     # DELETE MANY
-    # =====================================================
+    # -----------------------------------------------------
 
     def delete_many(
         self,
@@ -594,230 +592,224 @@ class DualCollection:
         **kwargs
     ):
 
+        if IS_RENDER:
+
+            collection = self._atlas_collection()
+
+            if collection is None:
+                raise RuntimeError(
+                    "MongoDB Atlas connection is not available."
+                )
+
+            return collection.delete_many(
+                filter,
+                *args,
+                **kwargs
+            )
+
         local_result = None
         atlas_result = None
 
-        try:
+        local_collection = self._local_collection()
 
-            if self.local is not None:
+        if local_collection is not None:
 
-                local_result = self.local.delete_many(
-                    filter,
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            print(
-                "Local MongoDB delete error:",
-                error
+            local_result = local_collection.delete_many(
+                filter,
+                *args,
+                **kwargs
             )
 
+        atlas_collection = self._atlas_collection()
 
-        try:
+        if atlas_collection is not None:
 
-            if self.atlas is not None:
-
-                atlas_result = self.atlas.delete_many(
-                    filter,
-                    *args,
-                    **kwargs
-                )
-
-        except Exception as error:
-
-            print(
-                "MongoDB Atlas delete error:",
-                error
+            atlas_result = atlas_collection.delete_many(
+                filter,
+                *args,
+                **kwargs
             )
 
+        return atlas_result or local_result
 
-        return local_result or atlas_result
-
-
-    # =====================================================
+    # -----------------------------------------------------
     # FIND
-    # =====================================================
+    # -----------------------------------------------------
 
-    def find(
-        self,
-        *args,
-        **kwargs
-    ):
+    def find(self, *args, **kwargs):
 
-        # Prefer local database
-        if self.local is not None:
+        if IS_RENDER:
 
-            return self.local.find(
+            collection = self._atlas_collection()
+
+            if collection is None:
+                raise RuntimeError(
+                    "MongoDB Atlas connection is not available."
+                )
+
+            return collection.find(
                 *args,
                 **kwargs
             )
 
+        local_collection = self._local_collection()
 
-        # Fallback to Atlas
-        if self.atlas is not None:
+        if local_collection is not None:
 
-            return self.atlas.find(
+            return local_collection.find(
                 *args,
                 **kwargs
             )
 
+        atlas_collection = self._atlas_collection()
 
-        return []
+        if atlas_collection is not None:
 
+            return atlas_collection.find(
+                *args,
+                **kwargs
+            )
 
-    # =====================================================
+        raise RuntimeError(
+            "Neither Local MongoDB nor MongoDB Atlas is available."
+        )
+
+    # -----------------------------------------------------
     # FIND ONE
-    # =====================================================
+    # -----------------------------------------------------
 
-    def find_one(
-        self,
-        *args,
-        **kwargs
-    ):
+    def find_one(self, *args, **kwargs):
 
-        if self.local is not None:
+        if IS_RENDER:
 
-            return self.local.find_one(
+            collection = self._atlas_collection()
+
+            if collection is None:
+                raise RuntimeError(
+                    "MongoDB Atlas connection is not available."
+                )
+
+            return collection.find_one(
                 *args,
                 **kwargs
             )
 
+        local_collection = self._local_collection()
 
-        if self.atlas is not None:
+        if local_collection is not None:
 
-            return self.atlas.find_one(
+            result = local_collection.find_one(
                 *args,
                 **kwargs
             )
 
+            if result is not None:
+                return result
+
+        atlas_collection = self._atlas_collection()
+
+        if atlas_collection is not None:
+
+            return atlas_collection.find_one(
+                *args,
+                **kwargs
+            )
 
         return None
 
-
-    # =====================================================
+    # -----------------------------------------------------
     # COUNT DOCUMENTS
-    # =====================================================
+    # -----------------------------------------------------
 
-    def count_documents(
-        self,
-        *args,
-        **kwargs
-    ):
+    def count_documents(self, *args, **kwargs):
 
-        if self.local is not None:
+        if IS_RENDER:
 
-            return self.local.count_documents(
+            collection = self._atlas_collection()
+
+            if collection is None:
+                raise RuntimeError(
+                    "MongoDB Atlas connection is not available."
+                )
+
+            return collection.count_documents(
                 *args,
                 **kwargs
             )
 
+        local_collection = self._local_collection()
 
-        if self.atlas is not None:
+        if local_collection is not None:
 
-            return self.atlas.count_documents(
+            return local_collection.count_documents(
                 *args,
                 **kwargs
             )
 
+        atlas_collection = self._atlas_collection()
+
+        if atlas_collection is not None:
+
+            return atlas_collection.count_documents(
+                *args,
+                **kwargs
+            )
 
         return 0
 
-
-    # =====================================================
+    # -----------------------------------------------------
     # CREATE INDEX
-    # =====================================================
+    # -----------------------------------------------------
 
-    def create_index(
-        self,
-        *args,
-        **kwargs
-    ):
+    def create_index(self, *args, **kwargs):
 
-        local_result = None
-        atlas_result = None
+        results = []
 
-        # Local
-        try:
+        if IS_RENDER:
 
-            if self.local is not None:
+            collection = self._atlas_collection()
 
-                local_result = self.local.create_index(
+            if collection is not None:
+
+                return collection.create_index(
                     *args,
                     **kwargs
                 )
 
-        except Exception as error:
+            return None
 
-            print(
-                "Local MongoDB index error:",
-                error
-            )
+        local_collection = self._local_collection()
 
+        if local_collection is not None:
 
-        # Atlas
-        try:
-
-            if self.atlas is not None:
-
-                atlas_result = self.atlas.create_index(
+            results.append(
+                local_collection.create_index(
                     *args,
                     **kwargs
                 )
-
-        except Exception as error:
-
-            print(
-                "MongoDB Atlas index error:",
-                error
             )
 
+        atlas_collection = self._atlas_collection()
 
-        return local_result or atlas_result
+        if atlas_collection is not None:
+
+            results.append(
+                atlas_collection.create_index(
+                    *args,
+                    **kwargs
+                )
+            )
+
+        return results[-1] if results else None
 
 
 # =========================================================
-# DUAL COLLECTION FACTORY
+# GENERIC DUAL COLLECTION
 # =========================================================
 
-def get_dual_collection(
-    collection_name
-):
+def get_dual_collection(collection_name):
 
-    local_database = get_database()
-
-    atlas_database = get_atlas_database()
-
-    local_collection = None
-
-    atlas_collection = None
-
-
-    # Local collection
-    if local_database is not None:
-
-        local_collection = (
-            local_database[
-                collection_name
-            ]
-        )
-
-
-    # Atlas collection
-    if atlas_database is not None:
-
-        atlas_collection = (
-            atlas_database[
-                collection_name
-            ]
-        )
-
-
-    return DualCollection(
-        local_collection,
-        atlas_collection
-    )
+    return DualCollection(collection_name)
 
 
 # =========================================================
@@ -828,17 +820,6 @@ def get_events_collection():
 
     return get_dual_collection(
         "security_events"
-    )
-
-
-# =========================================================
-# ACCESS LOGS
-# =========================================================
-
-def get_access_logs_collection():
-
-    return get_dual_collection(
-        "access_logs"
     )
 
 
@@ -865,38 +846,57 @@ def get_dashboard_collection():
 
 
 # =========================================================
-# TEST BOTH CONNECTIONS
+# ACCESS LOGS
+# =========================================================
+
+def get_access_logs_collection():
+
+    return get_dual_collection(
+        "access_logs"
+    )
+
+
+# =========================================================
+# TEST CONNECTIONS
 # =========================================================
 
 def test_mongodb_connections():
 
-    print()
-    print("========================================")
-    print("       AEGIS MONGODB STATUS")
-    print("========================================")
+    print("")
+    print("============================================================")
+    print(" MONGODB CONNECTION TEST")
+    print("============================================================")
 
-    local = connect_local()
+    local = None
+    atlas = None
+
+    if not IS_RENDER:
+
+        local = connect_local()
 
     atlas = connect_atlas()
 
+    print("")
 
     if local is not None:
 
-        print("LOCAL  : OK")
+        print("Local MongoDB : OK")
 
     else:
 
-        print("LOCAL  : FAILED")
-
+        print("Local MongoDB : NOT AVAILABLE")
 
     if atlas is not None:
 
-        print("ATLAS  : OK")
+        print("MongoDB Atlas : OK")
 
     else:
 
-        print("ATLAS  : FAILED")
+        print("MongoDB Atlas : NOT AVAILABLE")
 
+    print("============================================================")
 
-    print("========================================")
-    print()
+    return {
+        "local": local is not None,
+        "atlas": atlas is not None
+    }
