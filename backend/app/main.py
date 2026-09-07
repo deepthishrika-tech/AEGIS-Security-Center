@@ -68,19 +68,13 @@ DEFAULT_CORS_ORIGINS = [
 ]
 
 
-# Additional origins can be supplied through Render
-# environment variable:
-#
-# CORS_ORIGINS=https://example.com,https://another-example.com
-#
 EXTRA_CORS_ORIGINS = [
-    origin.strip()
+    origin.strip().rstrip("/")
     for origin in os.getenv("CORS_ORIGINS", "").split(",")
     if origin.strip()
 ]
 
 
-# Remove duplicates while preserving order
 CORS_ORIGINS = list(
     dict.fromkeys(
         DEFAULT_CORS_ORIGINS + EXTRA_CORS_ORIGINS
@@ -139,18 +133,10 @@ async def activity_logger(request: Request, call_next):
             if events_collection is not None:
 
                 event_document = {
-
-                    "event_type":
-                        "API_REQUEST",
-
-                    "method":
-                        request.method,
-
-                    "path":
-                        request.url.path,
-
-                    "query":
-                        str(request.url.query),
+                    "event_type": "API_REQUEST",
+                    "method": request.method,
+                    "path": request.url.path,
+                    "query": str(request.url.query),
 
                     "client_ip": (
                         request.client.host
@@ -208,21 +194,12 @@ async def activity_logger(request: Request, call_next):
             ):
 
                 log_access_event(
-
                     action="LOGIN",
-
                     request=request,
-
                     status=(
                         "SUCCESS"
                         if status_code < 400
                         else "FAILED"
-                    ),
-
-                    reason=(
-                        None
-                        if status_code < 400
-                        else "Authentication failed"
                     ),
                 )
 
@@ -237,11 +214,8 @@ async def activity_logger(request: Request, call_next):
             ):
 
                 log_access_event(
-
                     action="LOGOUT",
-
                     request=request,
-
                     status=(
                         "SUCCESS"
                         if status_code < 400
@@ -260,21 +234,18 @@ async def activity_logger(request: Request, call_next):
             ):
 
                 log_admin_activity(
-
                     action="BLOCK",
-
                     request=request,
-
                     status=(
                         "SUCCESS"
                         if status_code < 400
                         else "FAILED"
                     ),
-
-                    description=(
-                        "Administrator blocked "
-                        "a security source."
-                    ),
+                    details={
+                        "description":
+                            "Administrator blocked "
+                            "a security source."
+                    },
                 )
 
 
@@ -288,21 +259,18 @@ async def activity_logger(request: Request, call_next):
             ):
 
                 log_admin_activity(
-
                     action="UNBLOCK",
-
                     request=request,
-
                     status=(
                         "SUCCESS"
                         if status_code < 400
                         else "FAILED"
                     ),
-
-                    description=(
-                        "Administrator unblocked "
-                        "a security source."
-                    ),
+                    details={
+                        "description":
+                            "Administrator unblocked "
+                            "a security source."
+                    },
                 )
 
 
@@ -316,21 +284,18 @@ async def activity_logger(request: Request, call_next):
             ):
 
                 log_admin_activity(
-
                     action="OVERRIDE",
-
                     request=request,
-
                     status=(
                         "SUCCESS"
                         if status_code < 400
                         else "FAILED"
                     ),
-
-                    description=(
-                        "Administrator performed "
-                        "an authorized security override."
-                    ),
+                    details={
+                        "description":
+                            "Administrator performed "
+                            "an authorized security override."
+                    },
                 )
 
 
@@ -344,21 +309,18 @@ async def activity_logger(request: Request, call_next):
             ):
 
                 log_admin_activity(
-
                     action="WHITELIST",
-
                     request=request,
-
                     status=(
                         "SUCCESS"
                         if status_code < 400
                         else "FAILED"
                     ),
-
-                    description=(
-                        "Administrator changed "
-                        "the security whitelist."
-                    ),
+                    details={
+                        "description":
+                            "Administrator changed "
+                            "the security whitelist."
+                    },
                 )
 
 
@@ -389,7 +351,6 @@ app.include_router(history_router)
 def root():
 
     return {
-
         "application":
             "AI Attack Tool Detector & Blocker",
 
@@ -414,7 +375,6 @@ def health_check():
     timestamp = datetime.now(timezone.utc)
 
     return {
-
         "status":
             "healthy",
 
@@ -512,7 +472,6 @@ def create_dashboard_data():
             "authentication":
                 9,
 
-            # Keep "auth" for existing frontend
             "auth":
                 9,
 
@@ -618,7 +577,6 @@ def dashboard():
 
     dashboard_data = create_dashboard_data()
 
-    # Save every API request to MongoDB
     save_dashboard_history(
         dashboard_data
     )
@@ -640,10 +598,8 @@ async def automatic_dashboard_history():
 
         try:
 
-            # Create fresh dashboard data
             dashboard_data = create_dashboard_data()
 
-            # Store snapshot in MongoDB
             save_dashboard_history(
                 dashboard_data
             )
@@ -654,10 +610,6 @@ async def automatic_dashboard_history():
                 "Automatic history error:",
                 error
             )
-
-        # =================================================
-        # UPDATE EVERY 5 SECONDS
-        # =================================================
 
         await asyncio.sleep(5)
 
@@ -759,7 +711,6 @@ def database_status():
                     "aegis_security_center",
             }
 
-        # Test database with ping
         database.command("ping")
 
         return {
