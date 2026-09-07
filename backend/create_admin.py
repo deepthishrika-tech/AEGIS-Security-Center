@@ -1,24 +1,20 @@
 import getpass
-import sqlite3
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 import hashlib
 import secrets
+import os
+
+from dotenv import load_dotenv
+from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
 
 
 # =========================================================
-# DATABASE
+# LOAD ENVIRONMENT VARIABLES
 # =========================================================
 
-BASE_DIR = Path(__file__).resolve().parent
-
-DATABASE_PATH = (
-    BASE_DIR
-    / "app"
-    / "database"
-    / "aegis_security.db"
-)
+load_dotenv()
 
 
 # =========================================================
@@ -95,68 +91,244 @@ if len(password) < 8:
     sys.exit(1)
 
 
-password_hash = hash_password(
-    password
-)
+password_hash = hash_password(password)
 
 
-connection = sqlite3.connect(
-    DATABASE_PATH
-)
-
-cursor = connection.cursor()
-
+# =========================================================
+# MONGODB ATLAS CONNECTION
+# =========================================================
 
 try:
 
-    cursor.execute(
-        """
-        INSERT INTO users
-        (
-            username,
-            password_hash,
-            role,
-            is_active,
-            created_at
-        )
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (
-            username,
-            password_hash,
-            "SECURITY_ADMIN",
-            1,
-            datetime.now(
-                timezone.utc
-            ).isoformat()
-        )
+    atlas_uri = os.getenv(
+        "ATLAS_MONGO_URI"
     )
 
-    connection.commit()
+    atlas_db_name = os.getenv(
+        "ATLAS_MONGO_DB_NAME",
+        "aegis_security_center"
+    )
+
+
+    # -----------------------------------------------------
+    # CHECK ATLAS URI
+    # -----------------------------------------------------
+
+    if not atlas_uri:
+
+        print()
+        print(
+            "ERROR: ATLAS_MONGO_URI is not set."
+        )
+        print()
+        print(
+            "Make sure your .env contains:"
+        )
+        print(
+            "ATLAS_MONGO_URI=<your Atlas connection string>"
+        )
+        print()
+
+        sys.exit(1)
+
+
+    # -----------------------------------------------------
+    # CONNECT TO ATLAS
+    # -----------------------------------------------------
+
+    print("----------------------------------------")
+    print("Connecting to MongoDB Atlas...")
+    print("----------------------------------------")
+
+
+    client = MongoClient(
+        atlas_uri,
+        serverSelectionTimeoutMS=10000
+    )
+
+
+    # Force connection test
+    client.admin.command("ping")
+
+
+    database = client[
+        atlas_db_name
+    ]
+
+
+    users_collection = database[
+        "users"
+    ]
+
+
+    print(
+        "========================================"
+    )
+    print(
+        "MONGODB ATLAS : CONNECTED"
+    )
+    print(
+        f"DATABASE      : {atlas_db_name}"
+    )
+    print(
+        "========================================"
+    )
+
+
+    # =====================================================
+    # ENSURE USERNAME IS UNIQUE
+    # =====================================================
+
+    users_collection.create_index(
+        "username",
+        unique=True
+    )
+
+
+    # =====================================================
+    # CHECK IF USER ALREADY EXISTS
+    # =====================================================
+
+    existing_user = users_collection.find_one(
+        {
+            "username": username
+        }
+    )
+
+
+    if existing_user:
+
+        print()
+        print(
+            f"ERROR: Username '{username}' already exists "
+            "in MongoDB Atlas."
+        )
+        print()
+
+        client.close()
+
+        sys.exit(1)
+
+
+    # =====================================================
+    # CREATE ADMIN USER IN ATLAS
+    # =====================================================
+
+    users_collection.insert_one(
+        {
+            "username": username,
+
+            "password_hash":
+                password_hash,
+
+            "role":
+                "SECURITY_ADMIN",
+
+            "is_active":
+                True,
+
+            "created_at":
+                datetime.now(
+                    timezone.utc
+                ),
+
+            "last_login":
+                None
+        }
+    )
+
+
+    # =====================================================
+    # SUCCESS
+    # =====================================================
 
     print()
     print("=" * 60)
-    print(" ADMIN ACCOUNT CREATED SUCCESSFULLY")
+    print(
+        " ADMIN ACCOUNT CREATED SUCCESSFULLY"
+    )
     print("=" * 60)
     print()
-    print(f"Username : {username}")
-    print("Role     : SECURITY_ADMIN")
-    print("Password : STORED AS SECURE HASH")
+
+    print(
+        f"Username  : {username}"
+    )
+
+    print(
+        "Role      : SECURITY_ADMIN"
+    )
+
+    print(
+        "Password  : STORED AS SECURE HASH"
+    )
+
     print()
-    print("IMPORTANT:")
-    print("The password will NOT be displayed or stored")
-    print("in plain text.")
+
+    print(
+        "Database  : MongoDB Atlas"
+    )
+
+    print(
+        "Collection: users"
+    )
+
+    print()
+
+    print(
+        "IMPORTANT:"
+    )
+
+    print(
+        "The password will NOT be displayed or stored"
+    )
+
+    print(
+        "in plain text."
+    )
+
     print()
 
 
-except sqlite3.IntegrityError:
+    client.close()
+
+
+# =========================================================
+# DUPLICATE USER
+# =========================================================
+
+except DuplicateKeyError:
 
     print()
     print(
-        f"ERROR: Username '{username}' already exists."
+        f"ERROR: Username '{username}' already exists "
+        "in MongoDB Atlas."
+    )
+    print()
+
+
+# =========================================================
+# OTHER ERRORS
+# =========================================================
+
+except Exception as error:
+
+    print()
+    print("=" * 60)
+    print(
+        " ERROR CONNECTING TO MONGODB ATLAS"
+    )
+    print("=" * 60)
+    print()
+
+    print(
+        f"Reason: {error}"
     )
 
+    print()
 
-finally:
+    print(
+        "Check ATLAS_MONGO_URI and "
+        "ATLAS_MONGO_DB_NAME."
+    )
 
-    connection.close()
+    print()
