@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 function App() {
   const savedToken = localStorage.getItem("aegis_token");
@@ -1541,6 +1542,56 @@ const loadHistory = async () => {
 
             </section>
 
+            {/* LIVE DASHBOARD HISTORY */}
+
+            <section className="history-grid">
+
+              <div className="panel history-panel">
+
+                <div className="panel-header">
+
+                  <div>
+
+                    <h2>
+                      ⏱ &nbsp; Live Dashboard History
+                    </h2>
+
+                    <span>
+                      Real-time activity &amp; system events
+                    </span>
+
+                  </div>
+
+                  <span className="live-label">
+                    ● LIVE
+                  </span>
+
+                </div>
+
+                <div className="history-list">
+
+                  {history.length === 0 && (
+                    <div className="history-empty">
+                      No history events yet.
+                    </div>
+                  )}
+
+                  {history.slice(0, 12).map((item) => (
+                    <HistoryRow
+                      key={item._id}
+                      action={item.display_action}
+                      username={item.display_username}
+                      source={item.history_source}
+                      timestamp={item.timestamp}
+                    />
+                  ))}
+
+                </div>
+
+              </div>
+
+            </section>
+
           </>
         )}
 
@@ -2044,6 +2095,81 @@ function AnomalyRow({
 /* =========================================================
    OTHER SECTION VIEW
    ========================================================= */
+
+/* =========================================================
+   DASHBOARD HISTORY ROW
+   ========================================================= */
+
+function HistoryRow({ action, username, source, timestamp }) {
+  const tagClass = String(source || "system").toLowerCase();
+
+  return (
+    <div className="history-row">
+
+      <div className="history-row-main">
+
+        <span className={`history-source-tag ${tagClass}`}>
+          {source || "SYSTEM"}
+        </span>
+
+        <span className="history-action">
+          {action || "Event"}
+        </span>
+
+      </div>
+
+      <div className="history-row-meta">
+
+        <span>{username || "SYSTEM"}</span>
+
+        <span>{formatRelativeTime(timestamp)}</span>
+
+      </div>
+
+    </div>
+  );
+}
+
+function formatRelativeTime(timestamp) {
+  if (!timestamp) {
+    return "";
+  }
+
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const diffSeconds = Math.max(
+    0,
+    Math.round((Date.now() - date.getTime()) / 1000)
+  );
+
+  if (diffSeconds < 5) {
+    return "just now";
+  }
+
+  if (diffSeconds < 60) {
+    return `${diffSeconds}s ago`;
+  }
+
+  const diffMinutes = Math.round(diffSeconds / 60);
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+
+  return `${diffDays}d ago`;
+}
 
 function SectionView({
   section,

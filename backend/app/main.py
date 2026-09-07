@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import os
 import time
 import asyncio
 
@@ -49,16 +50,28 @@ app = FastAPI(
 # CORS
 # =========================================================
 
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+]
+
+# Extra production origins (e.g. your deployed frontend URL)
+# can be supplied as a comma-separated list via the
+# CORS_ORIGINS environment variable, without removing the
+# local dev origins above.
+EXTRA_CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "http://localhost:5175",
-        "http://127.0.0.1:5175",
-    ],
+    allow_origins=DEFAULT_CORS_ORIGINS + EXTRA_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
