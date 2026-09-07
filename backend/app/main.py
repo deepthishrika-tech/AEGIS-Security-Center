@@ -6,6 +6,7 @@ import asyncio
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+
 # =========================================================
 # AUDIT LOGGING
 # =========================================================
@@ -15,6 +16,7 @@ from app.database.audit import (
     log_access_event,
 )
 
+
 # =========================================================
 # API ROUTERS
 # =========================================================
@@ -22,6 +24,7 @@ from app.database.audit import (
 from app.api.auth import router as auth_router
 from app.api.security import router as security_router
 from app.api.history import router as history_router
+
 
 # =========================================================
 # MONGODB
@@ -32,6 +35,7 @@ from app.mongo import (
     get_events_collection,
     get_dashboard_collection,
 )
+
 
 # =========================================================
 # APPLICATION
@@ -46,6 +50,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
 # =========================================================
 # CORS
 # =========================================================
@@ -57,29 +62,41 @@ DEFAULT_CORS_ORIGINS = [
     "http://127.0.0.1:5174",
     "http://localhost:5175",
     "http://127.0.0.1:5175",
+
+    # Render production frontend
+    "https://aegis-security-center-frontend.onrender.com",
 ]
 
-# Extra production origins (e.g. your deployed frontend URL)
-# can be supplied as a comma-separated list via the
-# CORS_ORIGINS environment variable, without removing the
-# local dev origins above.
+
+# Additional origins can be supplied through Render
+# environment variable:
+#
+# CORS_ORIGINS=https://example.com,https://another-example.com
+#
 EXTRA_CORS_ORIGINS = [
     origin.strip()
     for origin in os.getenv("CORS_ORIGINS", "").split(",")
     if origin.strip()
 ]
 
+
+# Remove duplicates while preserving order
+CORS_ORIGINS = list(
+    dict.fromkeys(
+        DEFAULT_CORS_ORIGINS + EXTRA_CORS_ORIGINS
+    )
+)
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://aegis-security-center-frontend.onrender.com",
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 # =========================================================
 # MONGODB ACTIVITY LOGGER
 # =========================================================
@@ -166,6 +183,7 @@ async def activity_logger(request: Request, call_next):
                     event_document
                 )
 
+
             # =================================================
             # ADMIN / ACCESS AUDIT LOGGING
             # =================================================
@@ -178,6 +196,7 @@ async def activity_logger(request: Request, call_next):
                 if response
                 else 500
             )
+
 
             # =================================================
             # ADMIN LOGIN
@@ -207,6 +226,7 @@ async def activity_logger(request: Request, call_next):
                     ),
                 )
 
+
             # =================================================
             # ADMIN LOGOUT
             # =================================================
@@ -228,6 +248,7 @@ async def activity_logger(request: Request, call_next):
                         else "FAILED"
                     ),
                 )
+
 
             # =================================================
             # BLOCK SOURCE
@@ -256,6 +277,7 @@ async def activity_logger(request: Request, call_next):
                     ),
                 )
 
+
             # =================================================
             # UNBLOCK SOURCE
             # =================================================
@@ -282,6 +304,7 @@ async def activity_logger(request: Request, call_next):
                         "a security source."
                     ),
                 )
+
 
             # =================================================
             # SECURITY OVERRIDE
@@ -310,6 +333,7 @@ async def activity_logger(request: Request, call_next):
                     ),
                 )
 
+
             # =================================================
             # WHITELIST
             # =================================================
@@ -336,6 +360,7 @@ async def activity_logger(request: Request, call_next):
                         "the security whitelist."
                     ),
                 )
+
 
         except Exception as log_error:
 
@@ -428,6 +453,7 @@ def create_dashboard_data():
         "system_status":
             "OPERATIONAL",
 
+
         # =================================================
         # SERVICES
         # =================================================
@@ -466,6 +492,7 @@ def create_dashboard_data():
                     "warning",
             },
         ],
+
 
         # =================================================
         # THREAT DISTRIBUTION
@@ -790,6 +817,7 @@ async def startup_event():
 
     print("=" * 60)
 
+
     # =====================================================
     # CONNECT MONGODB
     # =====================================================
@@ -807,6 +835,7 @@ async def startup_event():
         print(
             " MongoDB       : CONNECTION FAILED"
         )
+
 
     # =====================================================
     # START AUTOMATIC HISTORY LOGGER
@@ -827,6 +856,7 @@ async def startup_event():
         print(
             " MongoDB History : DISABLED"
         )
+
 
     print(
         " Backend Status : ONLINE"
